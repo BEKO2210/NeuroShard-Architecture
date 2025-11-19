@@ -8,7 +8,10 @@
 **Author:** Belkis Aslani (`BEKO2210`)  
 **Repository:** [github.com/BEKO2210/NeuroShard-Architecture](https://github.com/BEKO2210/NeuroShard-Architecture)
 
----
+📄 **Whitepaper:**  
+See the full LaTeX paper here:  
+[`whitepaper/NeuroShard_Whitepaper.tex`](whitepaper/NeuroShard_Whitepaper.tex)
+
 
 **NeuroShard** is an experimental, lightweight **Mixture-of-Experts (MoE)** architecture.  
 It is designed to answer a specific question: *Can simple learned routers, low-rank expert matrices, and compact embeddings create meaningful topic separation without Large Language Models?*
@@ -16,8 +19,6 @@ It is designed to answer a specific question: *Can simple learned routers, low-r
 This project runs on:
 * **Windows** (VS Code + Python 3.12 + PyTorch 2.9.1)
 * **Android** (Termux in a pure-Python, no-torch fallback version)
-
----
 
 ## 🚀 Key Features
 
@@ -36,7 +37,6 @@ This project runs on:
 * **📦 Modular Implementation**
     Clean separation of `src` (logic), `models` (checkpoints), `data`, and `experiments` (logs).
 
----
 
 ## 🧠 Architecture Overview
 
@@ -60,7 +60,6 @@ $$\alpha = \text{softmax}(R(x))$$
 The final output combines the base transformation with the weighted experts:
 $$\text{output} = h + \sum_{i} \alpha_i \cdot o_i$$
 
----
 
 ## 🧪 Experimental Results (Summary)
 
@@ -81,7 +80,6 @@ The model shows strong separation capabilities based on input semantics.
 * Smoother routing distributions.
 * Stronger cross-topic mixing capability.
 
----
 
 ## 📁 Project Structure
 
