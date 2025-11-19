@@ -1,0 +1,154 @@
+\documentclass{article}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{geometry}
+\geometry{a4paper, margin=2cm}
+
+\title{\textbf{NeuroShard Architecture v3.0}\\A Modular Sparse-MoE System with Learned Routing}
+\author{Belkis Aslani}
+\date{2025}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+NeuroShard is a lightweight, modular, sparse Mixture-of-Experts (MoE) architecture 
+designed for fast experimentation, transparent routing behavior, and efficient 
+topic-specialization. It achieves topic-dependent transformations using multiple 
+expert shards, a learned router, and simple interpretable embeddings. Despite its 
+small size (under 50k parameters), the system produces strong topic separation 
+and demonstrates the fundamental mechanics behind modern MoE LLMs such as 
+DeepSeek-V3, Mixtral, and Gemini-MoE.
+\end{abstract}
+
+\section{Introduction}
+
+Large MoE systems dominate modern LLM scaling. NeuroShard was created to 
+explore these concepts from scratch in a fully interpretable, transparent, 
+minimalistic architecture that can run on CPU, mobile devices, and even Termux.
+
+Goals:
+\begin{itemize}
+    \item Fully transparent routing decisions
+    \item Topic-dependant transformations
+    \item Trainable router (softmax-based)
+    \item Multiple expert shards with linear mixing
+    \item Tiny parameter count, fully reproducible
+\end{itemize}
+
+\section{Embedding Function}
+
+The embedding $x \in \mathbb{R}^{64}$ is produced from text by a simple bag-of-words 
+and n-gram based count vector. All values are normalized by $L^1$ norm:
+
+\[
+x = \frac{c_{\text{ngrams}}(t)}{\|c_{\text{ngrams}}(t)\|_1}
+\]
+
+This keeps the representation lightweight while maintaining strong topic separation.
+
+\section{Router Architecture}
+
+The router is a two-layer MLP:
+
+\[
+r = W_2 \, \text{ReLU}(W_1 x)
+\]
+
+Expert probabilities:
+
+\[
+\alpha = \text{softmax}(r)
+\]
+
+This determines which shard contributes most to the output.
+
+\section{Expert Shards}
+
+Each shard is a linear transformation:
+
+\[
+y_i = W_i x
+\]
+
+The final output:
+
+\[
+y = \sum_{i=1}^4 \alpha_i \, y_i
+\]
+
+where shards correspond to
+
+\begin{itemize}
+    \item Rap / Street Language
+    \item Soft / Emotional Language
+    \item Math / Formal Language
+    \item Animal / Nature topics
+\end{itemize}
+
+\section{Training}
+
+Two loss components are used:
+
+\[
+\mathcal{L} = \mathcal{L}_{MSE} + \lambda \mathcal{L}_{CE}
+\]
+
+\subsection{MSE Loss}
+For topic-specific target vectors $t$:
+
+\[
+\mathcal{L}_{MSE} = \|y - t\|_2^2
+\]
+
+\subsection{Router Cross-Entropy Loss}
+
+To push the router toward the correct expert:
+
+\[
+\mathcal{L}_{CE} = - \sum_i p_i \log(\alpha_i)
+\]
+
+\section{Experimental Results}
+
+After training 360 epochs, the model produces strong separations:
+
+\begin{itemize}
+    \item Rap inputs route $\approx 99.9\%$ to the Rap shard
+    \item Math inputs route $\approx 99.6\%$ to the Math shard
+    \item Soft emotional inputs route $\approx 99.7\%$ correctly
+    \item Animal/Nature inputs also show $99.7\%$ alignment
+\end{itemize}
+
+Representative example:
+
+\textbf{Input:} \textit{"street gang punchline rap"}
+
+\[
+\alpha = [0.9998,\, 0.000016,\, 0.00012,\, 0.00003]
+\]
+
+\textbf{Math Input Example:}
+
+\[
+\alpha = [0.00036,\, 0.99922,\, 0.00020,\, 0.00020]
+\]
+
+\section{Conclusion}
+
+NeuroShard successfully demonstrates:
+\begin{itemize}
+    \item Sparse expert routing
+    \item Modular shard architecture
+    \item Strong topic specialization
+    \item Full transparency of inner workings
+    \item Extremely small compute footprint
+\end{itemize}
+
+It represents a small but powerful educational and prototyping framework for 
+next-generation MoE research.
+
+\end{document}
