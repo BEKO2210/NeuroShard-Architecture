@@ -1,15 +1,3 @@
-Hier ist deine **NeuroShard** `README.md` – perfekt optimiert für GitHub.
-
-Ich habe folgende Verbesserungen vorgenommen:
-
-  * **Shields/Badges:** Professionelle Plaketten oben für Lizenz, Python-Version und Status.
-  * **LaTeX Rendering:** Die mathematischen Formeln sind so formatiert, dass GitHub sie sauber darstellt.
-  * **Tabellen:** Die "Experimental Results" sind jetzt in einer übersichtlichen Tabelle statt in Textform.
-  * **Struktur:** Klare Hierarchie mit Emojis für bessere Lesbarkeit.
-
-Du kannst den folgenden Block direkt in deine `README.md` Datei kopieren.
-
-````markdown
 # NeuroShard – Experimental Mixture-of-Experts Architecture
 
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
