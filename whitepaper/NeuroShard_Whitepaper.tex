@@ -1,154 +1,131 @@
-\documentclass{article}
-\usepackage{amsmath}
-\usepackage{amssymb}
+\documentclass[a4paper,11pt]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath, amssymb, amsthm}
 \usepackage{graphicx}
 \usepackage{hyperref}
+\usepackage{booktabs}
 \usepackage{geometry}
-\geometry{a4paper, margin=2cm}
+\usepackage{fancyhdr}
 
-\title{\textbf{NeuroShard Architecture v3.0}\\A Modular Sparse-MoE System with Learned Routing}
-\author{Belkis Aslani}
-\date{2025}
+% Page Layout
+\geometry{left=2.5cm, right=2.5cm, top=2.5cm, bottom=2.5cm}
+
+% Header/Footer
+\pagestyle{fancy}
+\fancyhf{}
+\lhead{NeuroShard Architecture}
+\rhead{B. Aslani (2025)}
+\cfoot{\thepage}
+
+% Title Info
+\title{\textbf{NeuroShard: An Experimental Lightweight Mixture-of-Experts Architecture}}
+\author{\textbf{Belkis Aslani} \\
+\textit{Independent Researcher} \\
+\texttt{github.com/BEKO2210/NeuroShard-Architecture}}
+\date{\today}
 
 \begin{document}
 
 \maketitle
 
 \begin{abstract}
-NeuroShard is a lightweight, modular, sparse Mixture-of-Experts (MoE) architecture 
-designed for fast experimentation, transparent routing behavior, and efficient 
-topic-specialization. It achieves topic-dependent transformations using multiple 
-expert shards, a learned router, and simple interpretable embeddings. Despite its 
-small size (under 50k parameters), the system produces strong topic separation 
-and demonstrates the fundamental mechanics behind modern MoE LLMs such as 
-DeepSeek-V3, Mixtral, and Gemini-MoE.
+This paper presents \textbf{NeuroShard}, an experimental neural architecture designed to explore the efficiency of Mixture-of-Experts (MoE) mechanisms in highly constrained environments. Unlike modern Large Language Models (LLMs) which require massive computational resources, NeuroShard utilizes a compact, letter-frequency-based embedding system coupled with low-rank expert matrices. We demonstrate that a small, learned router can effectively separate distinct semantic topics (e.g., Rap, Mathematics, Emotional prose) and activate specialized "shards" (experts) to transform input vectors directionally. The results suggest that semantic separation is possible with minimal parameter counts, offering potential pathways for mobile-first and offline AI utilities.
 \end{abstract}
 
+\tableofcontents
+\vspace{1cm}
+\hrule
+\vspace{1cm}
+
 \section{Introduction}
+The current landscape of Artificial Intelligence is dominated by Transformer-based architectures scaling into billions of parameters. While effective, these models are often impractical for local execution on mobile devices or in offline scenarios.
 
-Large MoE systems dominate modern LLM scaling. NeuroShard was created to 
-explore these concepts from scratch in a fully interpretable, transparent, 
-minimalistic architecture that can run on CPU, mobile devices, and even Termux.
+\textbf{NeuroShard} posits a different question: \textit{Can we achieve meaningful semantic routing and feature transformation using simple linear algebra and learned gating mechanisms?}
 
-Goals:
-\begin{itemize}
-    \item Fully transparent routing decisions
-    \item Topic-dependant transformations
-    \item Trainable router (softmax-based)
-    \item Multiple expert shards with linear mixing
-    \item Tiny parameter count, fully reproducible
-\end{itemize}
+This project implements a modular MoE architecture from scratch, using PyTorch for training and a pure-Python fallback for inference on Android (Termux). The core innovation lies in the combination of \textbf{Low-Rank Shards} and a \textbf{Learned Semantic Router}.
 
-\section{Embedding Function}
+\section{Mathematical Formulation}
 
-The embedding $x \in \mathbb{R}^{64}$ is produced from text by a simple bag-of-words 
-and n-gram based count vector. All values are normalized by $L^1$ norm:
+\subsection{Input Representation (Embeddings)}
+To maintain extreme lightweight characteristics, NeuroShard avoids heavy pre-trained embeddings (like BERT or Word2Vec). Instead, it uses a deterministic letter-frequency mapping or simple hashing:
+\begin{equation}
+    x \in \mathbb{R}^{d_{in}}
+\end{equation}
+Where $x$ represents the normalized frequency vector of the input string.
 
-\[
-x = \frac{c_{\text{ngrams}}(t)}{\|c_{\text{ngrams}}(t)\|_1}
-\]
+\subsection{The Base Transformation}
+Every input undergoes a shared fundamental transformation, representing the "general knowledge" or common features of the data:
+\begin{equation}
+    h = W_{base} \cdot x + b_{base}
+\end{equation}
 
-This keeps the representation lightweight while maintaining strong topic separation.
+\subsection{Low-Rank Experts (Shards)}
+Standard MoE models often use full feed-forward networks as experts. NeuroShard utilizes \textbf{Low-Rank Adapters} to minimize memory usage. Each expert $i$ is defined as:
+\begin{equation}
+    S_i = U_i \cdot V_i^T
+\end{equation}
+Where $U_i \in \mathbb{R}^{d_{out} \times r}$ and $V_i \in \mathbb{R}^{d_{in} \times r}$, with rank $r \ll d_{in}$.
+The output of a specific expert is:
+\begin{equation}
+    o_i = S_i \cdot x
+\end{equation}
 
-\section{Router Architecture}
+\subsection{The Router (Gating Mechanism)}
+The routing network determines which expert is best suited for the input. It is a learned Multi-Layer Perceptron (MLP):
+\begin{equation}
+    \text{logits} = R(x)
+\end{equation}
+\begin{equation}
+    \alpha = \text{softmax}(\text{logits})
+\end{equation}
+Here, $\alpha_i$ represents the confidence that the input belongs to topic $i$.
 
-The router is a two-layer MLP:
+\subsection{Output Fusion}
+The final output is a weighted summation of the base signal and the expert opinions:
+\begin{equation}
+    y = h + \sum_{i=1}^{N} \alpha_i \cdot o_i
+\end{equation}
 
-\[
-r = W_2 \, \text{ReLU}(W_1 x)
-\]
+\section{Architecture Evolution}
 
-Expert probabilities:
+\subsection{v1: Static Routing}
+The initial prototype used keyword matching to force routing weights $\alpha$. While functional, it did not generalize to unseen words.
 
-\[
-\alpha = \text{softmax}(r)
-\]
+\subsection{v2: Learned Routing}
+Introduced a trainable router optimized via Cross-Entropy Loss against labeled topic data, simultaneous with the reconstruction loss (MSE) for the experts.
+\begin{equation}
+    L_{total} = \lambda_1 L_{MSE}(y, y_{target}) + \lambda_2 L_{CrossEntropy}(\alpha, \text{label})
+\end{equation}
 
-This determines which shard contributes most to the output.
-
-\section{Expert Shards}
-
-Each shard is a linear transformation:
-
-\[
-y_i = W_i x
-\]
-
-The final output:
-
-\[
-y = \sum_{i=1}^4 \alpha_i \, y_i
-\]
-
-where shards correspond to
-
-\begin{itemize}
-    \item Rap / Street Language
-    \item Soft / Emotional Language
-    \item Math / Formal Language
-    \item Animal / Nature topics
-\end{itemize}
-
-\section{Training}
-
-Two loss components are used:
-
-\[
-\mathcal{L} = \mathcal{L}_{MSE} + \lambda \mathcal{L}_{CE}
-\]
-
-\subsection{MSE Loss}
-For topic-specific target vectors $t$:
-
-\[
-\mathcal{L}_{MSE} = \|y - t\|_2^2
-\]
-
-\subsection{Router Cross-Entropy Loss}
-
-To push the router toward the correct expert:
-
-\[
-\mathcal{L}_{CE} = - \sum_i p_i \log(\alpha_i)
-\]
+\subsection{v3: Big Data \& Generalization}
+Scaled the dataset to include diverse corpus entries. The model demonstrated the ability to route ambiguous inputs (e.g., "love and logic") by activating multiple experts simultaneously (soft routing).
 
 \section{Experimental Results}
 
-After training 360 epochs, the model produces strong separations:
+Experiments were conducted on a local Windows environment (PyTorch) and verified on Android.
 
+\begin{table}[h]
+    \centering
+    \begin{tabular}{@{}lp{4cm}l@{}}
+    \toprule
+    \textbf{Input String} & \textbf{Router Activation ($\alpha$)} & \textbf{Dominant Topic} \\ \midrule
+    "street gang rap" & $[0.99, 0.00, 0.00, 0.00]$ & Rap / Urban \\
+    "pure love peace" & $[0.00, 0.99, 0.00, 0.00]$ & Soft / Soul \\
+    "integral theorem" & $[0.00, 0.00, 0.99, 0.00]$ & Math / Logic \\
+    "hund katze bär" & $[0.00, 0.00, 0.00, 0.99]$ & Animals (DE) \\ \bottomrule
+    \end{tabular}
+    \caption{Routing behavior in NeuroShard v2. The model successfully identifies semantics based on character distribution alone.}
+    \label{tab:results}
+\end{table}
+
+\section{Limitations}
 \begin{itemize}
-    \item Rap inputs route $\approx 99.9\%$ to the Rap shard
-    \item Math inputs route $\approx 99.6\%$ to the Math shard
-    \item Soft emotional inputs route $\approx 99.7\%$ correctly
-    \item Animal/Nature inputs also show $99.7\%$ alignment
+    \item \textbf{Embeddings:} Letter-frequency embeddings lose word order information ("dog bites man" = "man bites dog").
+    \item \textbf{Capacity:} The low-rank constraint limits the complexity of features each shard can learn.
 \end{itemize}
 
-Representative example:
-
-\textbf{Input:} \textit{"street gang punchline rap"}
-
-\[
-\alpha = [0.9998,\, 0.000016,\, 0.00012,\, 0.00003]
-\]
-
-\textbf{Math Input Example:}
-
-\[
-\alpha = [0.00036,\, 0.99922,\, 0.00020,\, 0.00020]
-\]
-
-\section{Conclusion}
-
-NeuroShard successfully demonstrates:
-\begin{itemize}
-    \item Sparse expert routing
-    \item Modular shard architecture
-    \item Strong topic specialization
-    \item Full transparency of inner workings
-    \item Extremely small compute footprint
-\end{itemize}
-
-It represents a small but powerful educational and prototyping framework for 
-next-generation MoE research.
+\section{Conclusion \& Future Work}
+NeuroShard demonstrates that MoE architectures do not strictly require massive scale to function. The separation of concerns (Router vs. Experts) works even with minimal parameters. Future work will focus on integrating \textit{subword tokenizers} and exploring \textit{Multi-Head Routing} to capture nuances in longer texts.
 
 \end{document}
