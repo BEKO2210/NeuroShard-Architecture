@@ -29,7 +29,6 @@ This project runs on:
 
 * **📉 Low-Rank Shards**
     Each "expert" is a learned low-rank adapter matrix. This makes the model efficient, fast, and extremely small in parameter count.
-    $$S_i = U_i \cdot V_i^T$$
 
 * **🧠 Learned Router**
     A small neural network that maps embeddings to a softmax topic distribution.
